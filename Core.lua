@@ -5,6 +5,8 @@
 
 local addonName, ns = ...
 
+local addonVersion = C_AddOns.GetAddOnMetadata(addonName, "Version") or "?"
+
 local LDB = LibStub("LibDataBroker-1.1")
 local broker = LDB:NewDataObject("Broker_PlayerCoords", {
     type  = "data source",
@@ -29,6 +31,18 @@ local PVP_STATUS = {
     combat    = { "Combat",    1.00, 0.10, 0.10 },
 }
 
+-- Instance difficulty color lookup; order matters (Mythic+ before Mythic).
+local DIFF_KEYS = { "Mythic+", "Keystone", "Mythic", "Heroic", "Timewalking", "LFR", "Normal" }
+local DIFF_COLOR = {
+    ["Mythic+"]     = { 1.00, 0.80, 0.00 },  -- gold
+    ["Keystone"]    = { 1.00, 0.80, 0.00 },  -- gold  (alternate name)
+    ["Mythic"]      = { 0.80, 0.30, 1.00 },  -- purple
+    ["Heroic"]      = { 0.44, 0.64, 1.00 },  -- blue
+    ["Timewalking"] = { 0.41, 0.80, 0.94 },  -- sky-blue
+    ["LFR"]         = { 0.52, 0.80, 0.52 },  -- green
+    ["Normal"]      = { 0.52, 0.80, 0.52 },  -- green
+}
+
 -- Walk the parent-map chain to find the continent name.
 local function GetContinentName(mapID)
     local info = mapID and C_Map.GetMapInfo(mapID)
@@ -39,6 +53,33 @@ local function GetContinentName(mapID)
         if not info.parentMapID or info.parentMapID == 0 then break end
         info = C_Map.GetMapInfo(info.parentMapID)
     end
+end
+
+-- Returns (label, r, g, b) describing the zone/instance difficulty.
+local function GetZoneDifficulty(mapID)
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and instanceType ~= "none" then
+        local _, _, _, difficultyName = GetInstanceInfo()
+        if difficultyName and difficultyName ~= "" then
+            for _, key in ipairs(DIFF_KEYS) do
+                if difficultyName:find(key, 1, true) then
+                    local c = DIFF_COLOR[key]
+                    return difficultyName, c[1], c[2], c[3]
+                end
+            end
+            return difficultyName, CV_r, CV_g, CV_b  -- unknown type → white
+        end
+    end
+
+    -- Open world: try the map level range.
+    local minLvl, maxLvl = C_Map.GetMapLevels(mapID)
+    if minLvl and minLvl > 0 then
+        local label = (minLvl == maxLvl) and tostring(minLvl)
+                      or (minLvl .. " \226\128\147 " .. maxLvl)  -- en-dash
+        return label, CV_r, CV_g, CV_b
+    end
+
+    return "Scales", CV_r, CV_g, CV_b
 end
 
 -- ── broker text ───────────────────────────────────────────────────────────────
@@ -99,6 +140,7 @@ broker.OnEnter = function(self)
     local pvpType   = C_PvP.GetZonePVPInfo() or ""
     local pvp       = PVP_STATUS[pvpType] or { pvpType, 1, 1, 1 }
     local continent = GetContinentName(mapID) or "Unknown"
+    local diffLabel, diffR, diffG, diffB = GetZoneDifficulty(mapID)
 
     -- Anchor below the bar when in the top half, above when in the bottom half.
     local _, frameY = self:GetCenter()
@@ -117,16 +159,21 @@ broker.OnEnter = function(self)
 
     -- Detail block.
     GameTooltip:AddLine(" ")
-    GameTooltip:AddDoubleLine("Continent",   continent,      CL_r, CL_g, CL_b, CV_r,   CV_g,   CV_b  )
-    GameTooltip:AddDoubleLine("Status",      pvp[1],         CL_r, CL_g, CL_b, pvp[2], pvp[3], pvp[4])
+    GameTooltip:AddDoubleLine("Continent",  continent,  CL_r, CL_g, CL_b, CV_r,  CV_g,  CV_b  )
+    GameTooltip:AddDoubleLine("Status",     pvp[1],     CL_r, CL_g, CL_b, pvp[2],pvp[3],pvp[4])
+    GameTooltip:AddDoubleLine("Difficulty", diffLabel,  CL_r, CL_g, CL_b, diffR, diffG, diffB )
     if pos then
         local coords = ("%.2f, %.2f"):format(pos.x * 100, pos.y * 100)
-        GameTooltip:AddDoubleLine("Coordinates", coords,     CL_r, CL_g, CL_b, CV_r,   CV_g,   CV_b  )
+        GameTooltip:AddDoubleLine("Coordinates", coords, CL_r, CL_g, CL_b, CV_r, CV_g, CV_b)
     end
 
-    -- Interaction hints.
+    -- Interaction hint.
     GameTooltip:AddLine(" ")
     GameTooltip:AddLine("Click to open the World Map", CH_r, CH_g, CH_b)
+
+    -- Footer: addon name + version, right-aligned, faint grey.
+    GameTooltip:AddLine(" ")
+    GameTooltip:AddDoubleLine("", "Broker: Coords  v" .. addonVersion, 0, 0, 0, 0.45, 0.45, 0.45)
 
     GameTooltip:Show()
 end
