@@ -1,14 +1,16 @@
 ## Interface: 120005
-## Title: Broker: Coords
+## Title: Broker: |cffffffffCoords|r
+## IconTexture: Interface\Icons\INV_Misc_Map_01
 ## Notes: Lean LibDataBroker plugin showing zone, subzone, coordinates, sanctuary status and continent.
 ## Author: artherion77
-## Version: 0.1.0-dev
+## Version: 0.9.0-beta
 ## Category-enUS: Data Broker
 ## SavedVariables: Broker_PlayerCoordsDB
 
 Libs\LibStub\LibStub.lua
 Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
 Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 
 Locales\Locales.xml
 Settings.lua

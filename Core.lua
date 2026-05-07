@@ -14,6 +14,7 @@ local broker = LDB:NewDataObject("Broker_PlayerCoords", {
     icon  = "Interface\\Icons\\INV_Misc_Map_01",
     text  = "...",
 })
+ns.broker = broker  -- exposed for LibDBIcon registration in Settings.lua
 
 -- ── tooltip colors ────────────────────────────────────────────────────────────
 -- teal for static labels, white for dynamic values, dark-orange for interaction hints
@@ -126,42 +127,104 @@ local function GetInstanceIlvlInfo()
     return math.floor(equipped), recommended
 end
 
--- Returns (ilvlText, r, g, b) for the item level row.
+-- Returns (labelSuffix, valueText, r, g, b) for the item level row, or nil when no rec ilvl known.
 local function FormatIlvl(equipped, recommended)
-    if not recommended then
-        return tostring(equipped), CV_r, CV_g, CV_b  -- white, no comparison possible
-    end
+    if not recommended then return nil end  -- hide the row entirely when no comparison possible
     local diff = equipped - recommended
-    local label = equipped .. " / " .. recommended .. " req"
+    local r, g, b
     if diff >= 0 then
-        return label, 0.10, 1.00, 0.10   -- green:  at or above recommended
+        r, g, b = 0.10, 1.00, 0.10   -- green:  at or above recommended
     elseif diff >= -15 then
-        return label, 1.00, 1.00, 0.00   -- yellow: slightly under
+        r, g, b = 1.00, 1.00, 0.00   -- yellow: slightly under
     elseif diff >= -30 then
-        return label, 1.00, 0.50, 0.00   -- orange: under
+        r, g, b = 1.00, 0.50, 0.00   -- orange: under
     else
-        return label, 1.00, 0.10, 0.10   -- red:    severely under
+        r, g, b = 1.00, 0.10, 0.10   -- red:    severely under
+    end
+    return "iLvl (rec " .. recommended .. ")", tostring(equipped), r, g, b
+end
+
+-- Formats two map-position values (0–1 range) into a coord string using the saved precision.
+local function FmtCoords(x, y)
+    local p = ns.db and ns.db.coordPrecision or 2
+    return ("%." .. p .. "f, %." .. p .. "f"):format(x * 100, y * 100)
+end
+
+-- Returns an 8-point compass label for the player's current facing, or nil when unavailable.
+-- GetPlayerFacing() returns radians, 0 = North, increasing counter-clockwise (confirmed in-game).
+local COMPASS = { "N", "NW", "W", "SW", "S", "SE", "E", "NE" }
+local function GetFacingLabel()
+    local f = GetPlayerFacing()
+    if not f then return nil end
+    return COMPASS[(math.floor(f / (math.pi / 4) + 0.5) % 8) + 1]
+end
+
+-- ── minimap text overlay ───────────────────────────────────────────────────────
+
+local minimapText  -- FontString; created in SetupMinimapText() on ADDON_LOADED
+
+local function UpdateMinimapText()
+    if not minimapText then return end
+    local db = ns.db or {}
+    if not db.showMinimapCoords then
+        minimapText:Hide()
+        return
+    end
+    local mapID = C_Map.GetBestMapForUnit("player")
+    local pos   = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
+    if pos then
+        minimapText:SetText(FmtCoords(pos.x, pos.y))
+        minimapText:Show()
+    else
+        minimapText:Hide()
     end
 end
+ns.UpdateMinimapText = UpdateMinimapText
 
 -- ── broker text ───────────────────────────────────────────────────────────────
 
-local THROTTLE = 0.5
-local elapsed  = 0
-local moving   = false
+local elapsed = 0
+local moving  = false
 
 local function UpdateText()
     local mapID = C_Map.GetBestMapForUnit("player")
     local pos   = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
-    local zone  = GetZoneText() or ""
-    if pos then
-        broker.text = ("%s  %.2f, %.2f"):format(zone, pos.x * 100, pos.y * 100)
+    local db    = ns.db or {}
+
+    local zone    = db.showZone    ~= false and (GetZoneText()    or "") or ""
+    local subzone = db.showSubzone           and (GetSubZoneText() or "") or ""
+
+    -- Build the text label from whichever name parts are enabled.
+    local label
+    if zone ~= "" and subzone ~= "" and subzone ~= zone then
+        label = zone .. ": " .. subzone
     elseif zone ~= "" then
-        broker.text = zone
+        label = zone
+    elseif subzone ~= "" then
+        label = subzone
+    end
+
+    if pos then
+        local coords = FmtCoords(pos.x, pos.y)
+        if db.showFacing then
+            local dir = GetFacingLabel()
+            if dir then coords = coords .. "  " .. dir end
+        end
+        broker.text = label and (label .. "  " .. coords) or coords
+    elseif label then
+        broker.text = label
     else
         broker.text = "Unknown"
     end
+
+    UpdateMinimapText()
 end
+ns.UpdateText = UpdateText  -- exposed so Settings callbacks can refresh the bar immediately
+
+-- ── event frame ───────────────────────────────────────────────────────────────
+
+-- Forward declarations for setup functions defined further below.
+local SetupMinimapText, SetupWorldMapCursor
 
 local f = CreateFrame("Frame")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -170,9 +233,16 @@ f:RegisterEvent("ZONE_CHANGED_INDOORS")
 f:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 f:RegisterEvent("PLAYER_STARTED_MOVING")
 f:RegisterEvent("PLAYER_STOPPED_MOVING")
+f:RegisterEvent("ADDON_LOADED")
 
-f:SetScript("OnEvent", function(self, event)
-    if event == "PLAYER_STARTED_MOVING" then
+f:SetScript("OnEvent", function(self, event, arg1)
+    if event == "ADDON_LOADED" then
+        if arg1 == addonName then
+            self:UnregisterEvent("ADDON_LOADED")
+            SetupMinimapText()
+            SetupWorldMapCursor()
+        end
+    elseif event == "PLAYER_STARTED_MOVING" then
         moving  = true
         elapsed = 0
     elseif event == "PLAYER_STOPPED_MOVING" then
@@ -186,15 +256,110 @@ end)
 f:SetScript("OnUpdate", function(self, dt)
     if not moving then return end
     elapsed = elapsed + dt
-    if elapsed >= THROTTLE then
+    if elapsed >= (ns.db and ns.db.throttle or 0.5) then
         elapsed = 0
         UpdateText()
     end
 end)
 
+-- ── one-time frame setup ──────────────────────────────────────────────────────
+
+SetupMinimapText = function()
+    minimapText = Minimap:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    local fontPath = minimapText:GetFont()
+    minimapText:SetFont(fontPath, 10, "OUTLINE")
+    minimapText:SetTextColor(1, 1, 1)
+    minimapText:SetPoint("BOTTOM", Minimap, "BOTTOM", 0, 5)
+    minimapText:Hide()
+end
+
+SetupWorldMapCursor = function()
+    local container = WorldMapFrame and WorldMapFrame.ScrollContainer
+    if not container then return end
+
+    local cursorText = WorldMapFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    cursorText:SetPoint("BOTTOMRIGHT", container, "BOTTOMRIGHT", -8, 8)
+    cursorText:SetTextColor(1, 1, 1, 0.9)
+
+    WorldMapFrame:HookScript("OnUpdate", function()
+        local db = ns.db or {}
+        if not db.showWorldMapCursor then
+            cursorText:SetText("")
+            return
+        end
+        local x, y = container:GetNormalizedCursorPosition()
+        if x and y and x >= 0 and x <= 1 and y >= 0 and y <= 1 then
+            cursorText:SetText(FmtCoords(x, y))
+        else
+            cursorText:SetText("")
+        end
+    end)
+end
+
+-- ── clipboard copy ────────────────────────────────────────────────────────────
+-- Fallback when C_Clipboard is unavailable: a standard WoW dialog with a pre-selected
+-- EditBox. Built lazily on first use; we own editBox so SetText is always reliable.
+local copyFrame
+local copyFrameTitle  -- cached reference to the title FontString
+
+local function ShowCopyDialog(text, title)
+    if not copyFrame then
+        local f = CreateFrame("Frame", "BrokerCoordsCopyFrame", UIParent,
+                              "BasicFrameTemplateWithInset")
+        f:SetSize(380, 100)
+        f:SetPoint("CENTER", 0, 80)
+        f:SetMovable(true)
+        f:EnableMouse(true)
+        f:RegisterForDrag("LeftButton")
+        f:SetScript("OnDragStart", f.StartMoving)
+        f:SetScript("OnDragStop",  f.StopMovingOrSizing)
+
+        -- Cache the title FontString so we can update it on each call.
+        copyFrameTitle = f.TitleText
+                      or (f.TitleContainer and f.TitleContainer.TitleText)
+
+        -- Close button already provided by the template; wire it to Hide.
+        if f.CloseButton then
+            f.CloseButton:SetScript("OnClick", function() f:Hide() end)
+        end
+
+        -- Hint line
+        local hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        hint:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -32)
+        hint:SetTextColor(0.6, 0.6, 0.6)
+        hint:SetText("Ctrl-C to copy  \226\128\148  Enter or Esc to close")  -- em-dash
+
+        -- EditBox with standard WoW input styling
+        local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
+        eb:SetPoint("TOPLEFT",     f, "TOPLEFT",     16, -52)
+        eb:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16,  14)
+        eb:SetAutoFocus(true)
+        eb:SetScript("OnEscapePressed", function() f:Hide() end)
+        eb:SetScript("OnEnterPressed",  function() f:Hide() end)
+
+        f.editBox = eb
+        copyFrame = f
+    end
+
+    if copyFrameTitle then copyFrameTitle:SetText(title or "Copy Coordinates") end
+    copyFrame.editBox:SetText(text)
+    copyFrame.editBox:HighlightText()
+    copyFrame:Show()
+    copyFrame.editBox:SetFocus()
+end
+
+local function CopyToClipboard(text, title)
+    if C_Clipboard and C_Clipboard.SetText then
+        C_Clipboard.SetText(text)
+    else
+        ShowCopyDialog(text, title)
+    end
+end
+
 -- ── tooltip ───────────────────────────────────────────────────────────────────
 
 broker.OnEnter = function(self)
+    local db        = ns.db or {}
     local mapID     = C_Map.GetBestMapForUnit("player")
     local pos       = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
     local zone      = GetZoneText() or ""
@@ -224,25 +389,33 @@ broker.OnEnter = function(self)
 
     -- Detail block.
     GameTooltip:AddLine(" ")
-    GameTooltip:AddDoubleLine("Continent",  continent,  CL_r, CL_g, CL_b, CV_r,  CV_g,  CV_b  )
+    if db.showContinent ~= false then
+        GameTooltip:AddDoubleLine("Continent",  continent,  CL_r, CL_g, CL_b, CV_r,  CV_g,  CV_b  )
+    end
     GameTooltip:AddDoubleLine("Status",     pvp[1],     CL_r, CL_g, CL_b, pvp[2],pvp[3],pvp[4])
-    GameTooltip:AddDoubleLine("Difficulty", diffLabel,  CL_r, CL_g, CL_b, diffR, diffG, diffB )
+    if db.showDifficulty ~= false then
+        GameTooltip:AddDoubleLine("Difficulty", diffLabel,  CL_r, CL_g, CL_b, diffR, diffG, diffB )
+    end
     if pos then
-        local coords = ("%.2f, %.2f"):format(pos.x * 100, pos.y * 100)
-        GameTooltip:AddDoubleLine("Coordinates", coords, CL_r, CL_g, CL_b, CV_r, CV_g, CV_b)
+        GameTooltip:AddDoubleLine("Coordinates", FmtCoords(pos.x, pos.y), CL_r, CL_g, CL_b, CV_r, CV_g, CV_b)
     end
 
-    -- Item level row: only inside instances.
-    if inInstance then
-        local equipped, recommended   = GetInstanceIlvlInfo()
-        local ilvlText, ir, ig, ib    = FormatIlvl(equipped, recommended)
-        GameTooltip:AddDoubleLine("Item Level", ilvlText, CL_r, CL_g, CL_b, ir, ig, ib)
+    -- Item level row: only inside instances, only when a recommended ilvl is known, and only if enabled.
+    if inInstance and db.showIlvl ~= false then
+        local equipped, recommended            = GetInstanceIlvlInfo()
+        local ilvlLabel, ilvlValue, ir, ig, ib = FormatIlvl(equipped, recommended)
+        if ilvlLabel then
+            GameTooltip:AddDoubleLine(ilvlLabel, ilvlValue, CL_r, CL_g, CL_b, ir, ig, ib)
+        end
     end
 
     -- Interaction hints: keyword in orange, description in white.
     GameTooltip:AddLine(" ")
-    GameTooltip:AddDoubleLine("Click",       "open the World Map",      CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
-    GameTooltip:AddDoubleLine("Shift-Click", "share location in chat",  CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    GameTooltip:AddDoubleLine("Click",            "open the World Map",      CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    GameTooltip:AddDoubleLine("Shift-Click",      "share location in chat",  CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    GameTooltip:AddDoubleLine("Ctrl-Click",       "copy coordinates",        CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    GameTooltip:AddDoubleLine("Ctrl-Shift-Click", "copy /way command",       CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    GameTooltip:AddDoubleLine("Shift-RightClick", "open settings",           CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
 
     -- Footer: addon name + version, right-aligned, faint grey.
     GameTooltip:AddLine(" ")
@@ -256,7 +429,36 @@ broker.OnLeave = function(self)
 end
 
 broker.OnClick = function(self, button)
+    if button == "RightButton" then
+        if IsShiftKeyDown() and ns.settingsCategoryID then
+            Settings.OpenToCategory(ns.settingsCategoryID)
+        end
+        return
+    end
     if button ~= "LeftButton" then return end
+
+    if IsControlKeyDown() then
+        local mapID = C_Map.GetBestMapForUnit("player")
+        local pos   = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
+        if pos then
+            local zone = GetZoneText() or ""
+            if IsShiftKeyDown() then
+                -- Ctrl+Shift+Click: copy a /way command (TomTom / Blizzard waypoint).
+                -- Coordinates are always 2 dp and space-separated (standard /way format).
+                local x = ("%.2f"):format(pos.x * 100)
+                local y = ("%.2f"):format(pos.y * 100)
+                local cmd = zone ~= "" and ("/way " .. zone .. " " .. x .. " " .. y)
+                                       or  ("/way " .. x .. " " .. y)
+                CopyToClipboard(cmd, "Copy /way Command")
+            else
+                -- Ctrl+Click: copy plain "Zone x.xx, y.yy" text.
+                local text = zone ~= "" and (zone .. " " .. FmtCoords(pos.x, pos.y))
+                                        or  FmtCoords(pos.x, pos.y)
+                CopyToClipboard(text, "Copy Coordinates")
+            end
+        end
+        return
+    end
 
     if IsShiftKeyDown() then
         -- Build a waypoint hyperlink and insert it into the active chat box.
