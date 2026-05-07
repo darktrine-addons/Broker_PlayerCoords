@@ -167,9 +167,10 @@ broker.OnEnter = function(self)
         GameTooltip:AddDoubleLine("Coordinates", coords, CL_r, CL_g, CL_b, CV_r, CV_g, CV_b)
     end
 
-    -- Interaction hint.
+    -- Interaction hints.
     GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("Click to open the World Map", CH_r, CH_g, CH_b)
+    GameTooltip:AddLine("Click to open the World Map",       CH_r, CH_g, CH_b)
+    GameTooltip:AddLine("Shift-Click to share location in chat", CH_r, CH_g, CH_b)
 
     -- Footer: addon name + version, right-aligned, faint grey.
     GameTooltip:AddLine(" ")
@@ -180,4 +181,31 @@ end
 
 broker.OnLeave = function(self)
     GameTooltip:Hide()
+end
+
+broker.OnClick = function(self, button)
+    if button ~= "LeftButton" then return end
+
+    if IsShiftKeyDown() then
+        -- Build a waypoint hyperlink and insert it into the active chat box.
+        local mapID = C_Map.GetBestMapForUnit("player")
+        local pos   = mapID and C_Map.GetPlayerMapPosition(mapID, "player")
+        if mapID and pos then
+            C_Map.SetUserWaypoint(UiMapPoint.CreateFromCoordinates(mapID, pos.x, pos.y))
+            local hyperlink = C_Map.GetUserWaypointHyperlink()
+            C_Map.ClearUserWaypoint()  -- non-destructive: restores no-waypoint state
+            if hyperlink then
+                local zone    = GetZoneText() or ""
+                local subzone = GetSubZoneText() or ""
+                local msg = (subzone ~= "" and subzone ~= zone)
+                            and (zone .. ": " .. subzone .. " " .. hyperlink)
+                            or  (zone .. " " .. hyperlink)
+                local editBox = ChatEdit_ChooseBoxForSend()
+                ChatEdit_ActivateChat(editBox)
+                editBox:Insert(msg)
+            end
+        end
+    else
+        ToggleFrame(WorldMapFrame)
+    end
 end
