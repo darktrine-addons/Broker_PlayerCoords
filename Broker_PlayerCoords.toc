@@ -1,0 +1,11 @@
+## Interface: 120005
+## Title: Broker: Coords
+## Notes: Lean LibDataBroker plugin showing zone, subzone, coordinates, sanctuary status and continent.
+## Author: artherion77
+## Version: 0.1.0-dev
+## Category-enUS: Data Broker
+## SavedVariables: Broker_PlayerCoordsDB
+
+Locales\Locales.xml
+Settings.lua
+Core.lua

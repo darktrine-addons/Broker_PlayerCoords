@@ -1,0 +1,36 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and publish addon zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO=$(basename "$GITHUB_REPOSITORY")
+          TAG="${GITHUB_REF_NAME}"
+          ZIP="${REPO}-${TAG}.zip"
+
+          git archive --prefix="${REPO}/" --format=zip HEAD -o "$ZIP"
+
+          PRERELEASE_FLAG=""
+          if echo "$TAG" | grep -qE 'alpha|beta|rc'; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+
+          if gh release view "$TAG" &>/dev/null; then
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            gh release create "$TAG" --title "$TAG" $PRERELEASE_FLAG "$ZIP"
+          fi
