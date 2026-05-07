@@ -205,7 +205,7 @@ local function UpdateText()
     end
 
     if pos then
-        local coords = FmtCoords(pos.x, pos.y)
+        local coords = "(" .. FmtCoords(pos.x, pos.y) .. ")"
         if db.showFacing then
             local dir = GetFacingLabel()
             if dir then coords = coords .. "  " .. dir end
@@ -266,10 +266,8 @@ end)
 
 SetupMinimapText = function()
     minimapText = Minimap:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    local fontPath = minimapText:GetFont()
-    minimapText:SetFont(fontPath, 10, "OUTLINE")
     minimapText:SetTextColor(1, 1, 1)
-    minimapText:SetPoint("BOTTOM", Minimap, "BOTTOM", 0, 5)
+    minimapText:SetPoint("TOP", Minimap, "BOTTOM", 0, -4)
     minimapText:Hide()
 end
 
