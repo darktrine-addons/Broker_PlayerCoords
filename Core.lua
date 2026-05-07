@@ -19,7 +19,7 @@ local broker = LDB:NewDataObject("Broker_PlayerCoords", {
 -- teal for static labels, white for dynamic values, dark-orange for interaction hints
 local CL_r, CL_g, CL_b = 0.40, 0.80, 0.80   -- teal   (label)
 local CV_r, CV_g, CV_b = 1.00, 1.00, 1.00   -- white  (value)
-local CH_r, CH_g, CH_b = 1.00, 0.60, 0.10   -- orange (hint)
+local CH_r, CH_g, CH_b = 1.00, 0.60, 0.10   -- orange (hint keyword)
 
 local PVP_STATUS = {
     [""]      = { "None",      1.00, 1.00, 1.00 },
@@ -31,16 +31,18 @@ local PVP_STATUS = {
     combat    = { "Combat",    1.00, 0.10, 0.10 },
 }
 
--- Instance difficulty color lookup; order matters (Mythic+ before Mythic).
-local DIFF_KEYS = { "Mythic+", "Keystone", "Mythic", "Heroic", "Timewalking", "LFR", "Normal" }
+-- Instance difficulty color lookup; order matters (Mythic+ before Mythic, Delve before default).
+local DIFF_KEYS  = { "Mythic+", "Keystone", "Mythic", "Heroic", "Timewalking", "LFR", "Normal", "Delve", "Follower" }
 local DIFF_COLOR = {
     ["Mythic+"]     = { 1.00, 0.80, 0.00 },  -- gold
-    ["Keystone"]    = { 1.00, 0.80, 0.00 },  -- gold  (alternate name)
+    ["Keystone"]    = { 1.00, 0.80, 0.00 },  -- gold  (Blizzard's internal name)
     ["Mythic"]      = { 0.80, 0.30, 1.00 },  -- purple
     ["Heroic"]      = { 0.44, 0.64, 1.00 },  -- blue
     ["Timewalking"] = { 0.41, 0.80, 0.94 },  -- sky-blue
     ["LFR"]         = { 0.52, 0.80, 0.52 },  -- green
     ["Normal"]      = { 0.52, 0.80, 0.52 },  -- green
+    ["Delve"]       = { 0.94, 0.69, 0.23 },  -- warm amber
+    ["Follower"]    = { 0.70, 0.70, 0.70 },  -- grey (NPC-companion content)
 }
 
 -- Walk the parent-map chain to find the continent name.
@@ -55,12 +57,38 @@ local function GetContinentName(mapID)
     end
 end
 
--- Returns (label, r, g, b) describing the zone/instance difficulty.
+-- Returns (label, r, g, b) describing zone/instance difficulty, with tier or key level appended.
 local function GetZoneDifficulty(mapID)
     local inInstance, instanceType = IsInInstance()
     if inInstance and instanceType ~= "none" then
-        local _, _, _, difficultyName = GetInstanceInfo()
+        local _, _, difficultyID, difficultyName = GetInstanceInfo()
         if difficultyName and difficultyName ~= "" then
+
+            -- Mythic Keystone (M+): append key level.
+            if difficultyID == 8 then
+                local keystoneLevel = C_ChallengeMode and C_ChallengeMode.GetActiveKeystoneInfo
+                                      and C_ChallengeMode.GetActiveKeystoneInfo() or 0
+                if keystoneLevel and keystoneLevel > 0 then
+                    difficultyName = difficultyName .. "  +" .. keystoneLevel
+                end
+
+            -- Delves: append tier or Nemesis label from UI widget.
+            elseif difficultyID == 208 then
+                local wNormal  = C_UIWidgetManager.GetScenarioHeaderDelvesWidgetVisualizationInfo(6183)
+                local wNemesis = C_UIWidgetManager.GetScenarioHeaderDelvesWidgetVisualizationInfo(6184)
+                local wNemHard = C_UIWidgetManager.GetScenarioHeaderDelvesWidgetVisualizationInfo(6185)
+                if wNemHard and wNemHard.shownState == 1 then
+                    difficultyName = difficultyName .. "  Nemesis+"
+                elseif wNemesis and wNemesis.shownState == 1 then
+                    difficultyName = difficultyName .. "  Nemesis"
+                elseif wNormal and wNormal.shownState == 1 and wNormal.tierText then
+                    local tier = tonumber(wNormal.tierText)
+                    if tier and tier > 0 then
+                        difficultyName = difficultyName .. "  T" .. tier
+                    end
+                end
+            end
+
             for _, key in ipairs(DIFF_KEYS) do
                 if difficultyName:find(key, 1, true) then
                     local c = DIFF_COLOR[key]
@@ -80,6 +108,40 @@ local function GetZoneDifficulty(mapID)
     end
 
     return "Scales", CV_r, CV_g, CV_b
+end
+
+-- Returns (equippedIlvl, recommendedIlvl|nil) for the current instance.
+-- recommendedIlvl comes from C_LFGInfo.GetDungeonInfo via the lfgDungeonID in GetInstanceInfo.
+local function GetInstanceIlvlInfo()
+    local _, equipped = GetAverageItemLevel()
+    local _, _, _, _, _, _, _, _, _, lfgDungeonID = GetInstanceInfo()
+    local recommended
+    if lfgDungeonID and lfgDungeonID > 0 then
+        local info = C_LFGInfo.GetDungeonInfo(lfgDungeonID)
+        if info then
+            local raw = info.minGearLevel or info.minLevel or nil
+            if raw and raw > 0 then recommended = raw end
+        end
+    end
+    return math.floor(equipped), recommended
+end
+
+-- Returns (ilvlText, r, g, b) for the item level row.
+local function FormatIlvl(equipped, recommended)
+    if not recommended then
+        return tostring(equipped), CV_r, CV_g, CV_b  -- white, no comparison possible
+    end
+    local diff = equipped - recommended
+    local label = equipped .. " / " .. recommended .. " req"
+    if diff >= 0 then
+        return label, 0.10, 1.00, 0.10   -- green:  at or above recommended
+    elseif diff >= -15 then
+        return label, 1.00, 1.00, 0.00   -- yellow: slightly under
+    elseif diff >= -30 then
+        return label, 1.00, 0.50, 0.00   -- orange: under
+    else
+        return label, 1.00, 0.10, 0.10   -- red:    severely under
+    end
 end
 
 -- ── broker text ───────────────────────────────────────────────────────────────
@@ -142,6 +204,9 @@ broker.OnEnter = function(self)
     local continent = GetContinentName(mapID) or "Unknown"
     local diffLabel, diffR, diffG, diffB = GetZoneDifficulty(mapID)
 
+    local inInstance, instanceType = IsInInstance()
+    inInstance = inInstance and instanceType ~= "none"
+
     -- Anchor below the bar when in the top half, above when in the bottom half.
     local _, frameY = self:GetCenter()
     GameTooltip:SetOwner(self, "ANCHOR_NONE")
@@ -167,10 +232,17 @@ broker.OnEnter = function(self)
         GameTooltip:AddDoubleLine("Coordinates", coords, CL_r, CL_g, CL_b, CV_r, CV_g, CV_b)
     end
 
-    -- Interaction hints.
+    -- Item level row: only inside instances.
+    if inInstance then
+        local equipped, recommended   = GetInstanceIlvlInfo()
+        local ilvlText, ir, ig, ib    = FormatIlvl(equipped, recommended)
+        GameTooltip:AddDoubleLine("Item Level", ilvlText, CL_r, CL_g, CL_b, ir, ig, ib)
+    end
+
+    -- Interaction hints: keyword in orange, description in white.
     GameTooltip:AddLine(" ")
-    GameTooltip:AddLine("Click to open the World Map",       CH_r, CH_g, CH_b)
-    GameTooltip:AddLine("Shift-Click to share location in chat", CH_r, CH_g, CH_b)
+    GameTooltip:AddDoubleLine("Click",       "open the World Map",      CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    GameTooltip:AddDoubleLine("Shift-Click", "share location in chat",  CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
 
     -- Footer: addon name + version, right-aligned, faint grey.
     GameTooltip:AddLine(" ")
