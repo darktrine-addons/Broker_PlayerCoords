@@ -1,36 +1,41 @@
-name: Release
+name: Publish
+
+# DISABLED — manual trigger only.
+# Before enabling, complete these steps:
+#   1. Create a CurseForge project and fill in curse-id in .pkgmeta
+#   2. Create a Wago project and fill in wago-project-id in .pkgmeta
+#   3. Add CF_API_KEY and WAGO_API_TOKEN to repository secrets
+#      (GitHub repo → Settings → Secrets and variables → Actions → New repository secret)
+#
+# To enable automatic publishing on every version tag:
+#   - Remove the `workflow_dispatch` trigger below
+#   - Uncomment the `push` trigger block
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (build ZIP only, do not upload)'
+        required: false
+        default: 'false'
+
+# on:
+#   push:
+#     tags: ['*']
 
 jobs:
-  release:
+  publish:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0    # required — packager needs full tag history for changelog
 
-      - name: Build and publish addon zip
+      - uses: BigWigsMods/packager@v2
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          REPO=$(basename "$GITHUB_REPOSITORY")
-          TAG="${GITHUB_REF_NAME}"
-          ZIP="${REPO}-${TAG}.zip"
-
-          git archive --prefix="${REPO}/" --format=zip HEAD -o "$ZIP"
-
-          PRERELEASE_FLAG=""
-          if echo "$TAG" | grep -qE 'alpha|beta|rc'; then
-            PRERELEASE_FLAG="--prerelease"
-          fi
-
-          if gh release view "$TAG" &>/dev/null; then
-            gh release upload "$TAG" "$ZIP" --clobber
-          else
-            gh release create "$TAG" --title "$TAG" $PRERELEASE_FLAG "$ZIP"
-          fi
+          CF_API_KEY:     ${{ secrets.CF_API_KEY }}
+          WAGO_API_TOKEN: ${{ secrets.WAGO_API_TOKEN }}
+          GITHUB_OAUTH:   ${{ secrets.GITHUB_TOKEN }}
