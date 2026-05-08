@@ -1,27 +1,8 @@
 name: Publish
 
-# DISABLED — manual trigger only.
-# Before enabling, complete these steps:
-#   1. Create a CurseForge project and fill in curse-id in .pkgmeta
-#   2. Create a Wago project and fill in wago-project-id in .pkgmeta
-#   3. Add CF_API_KEY and WAGO_API_TOKEN to repository secrets
-#      (GitHub repo → Settings → Secrets and variables → Actions → New repository secret)
-#
-# To enable automatic publishing on every version tag:
-#   - Remove the `workflow_dispatch` trigger below
-#   - Uncomment the `push` trigger block
-
 on:
-  workflow_dispatch:
-    inputs:
-      dry_run:
-        description: 'Dry run (build ZIP only, do not upload)'
-        required: false
-        default: 'false'
-
-# on:
-#   push:
-#     tags: ['*']
+  push:
+    tags: ['*']
 
 jobs:
   publish:
