@@ -1,8 +1,3 @@
 package-as: Broker_PlayerCoords
 
-curse-id: 1536972
-wago-project-id: x618BvN1
-
-## Libs are embedded in the repo — no externals needed.
-
 enable-nolib-creation: no
