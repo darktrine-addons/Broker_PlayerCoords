@@ -1,10 +1,7 @@
 package-as: Broker_PlayerCoords
 
-## Replace these two values with your real project IDs before enabling the release workflow.
-## CurseForge project ID: visible in the project URL on curseforge.com
-## Wago project ID: visible in your project dashboard on addons.wago.io
-curse-id: REPLACE_WITH_CURSEFORGE_PROJECT_ID
-wago-project-id: REPLACE_WITH_WAGO_PROJECT_ID
+curse-id: 1536972
+wago-project-id: x618BvN1
 
 ## Libs are embedded in the repo — no externals needed.
 
