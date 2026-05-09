@@ -1,8 +1,10 @@
 # Broker: Coords
 
-A lean [LibDataBroker](https://www.wowace.com/projects/libdatabroker-1-1) plugin for World of Warcraft that displays your current zone, coordinates, and facing direction in any broker bar. Requires a broker display addon such as ElvUI, Bazooka, or TitanPanel.
+A featherweight [LibDataBroker](https://www.wowace.com/projects/libdatabroker-1-1) plugin that surfaces your current zone and coordinates in any broker bar.
 
-**Requires retail WoW (Midnight, Interface 120005+). Does not support Classic or older retail builds.**
+The differentiator is the tooltip: continent, PvP status, Mythic+ key level, Delve tier, and instance item level vs. recommended — with click handlers for World Map, chat waypoint sharing, and one-key clipboard copy of coordinates or a `/way` command.
+
+Retail only. Requires Midnight (Interface 120005+) and a broker host such as Arcana (recommended), ElvUI, Bazooka, Broker2FuBar, or TitanPanel.
 
 ## Features
 
@@ -18,7 +20,11 @@ A lean [LibDataBroker](https://www.wowace.com/projects/libdatabroker-1-1) plugin
 
 ## Installation
 
-1. Download the latest release zip from the [Releases](../../releases) page
+The recommended path is a package manager: **CurseForge app**, **WowUp**, or the **Wago app** — search for "Broker: Coords" and one-click install.
+
+For manual installation:
+
+1. Download the latest release zip from [GitHub Releases](https://github.com/darktrine-addons/Broker_PlayerCoords/releases), CurseForge, or Wago.io
 2. Extract the `Broker_PlayerCoords` folder into your addons directory:
    - **Windows**: `World of Warcraft\_retail_\Interface\AddOns\`
    - **macOS**: `Applications/World of Warcraft/_retail_/Interface/AddOns/`
@@ -32,8 +38,8 @@ All interactions are on the broker bar button:
 |---|---|
 | Left-click | Toggle the World Map |
 | Shift-Left-click | Insert a waypoint hyperlink into the active chat box |
-| Ctrl-Left-click | Open a "Copy Coordinates" dialog (pre-selected text, Ctrl-C to copy) |
-| Ctrl-Shift-Left-click | Open a "Copy /way Command" dialog (TomTom-compatible format) |
+| Ctrl-Left-click | Copy `Zone X.XX, Y.YY` to the system clipboard (dialog fallback if `C_Clipboard` is unavailable) |
+| Ctrl-Shift-Left-click | Copy a `/way` command to the system clipboard (Blizzard waypoint / TomTom-compatible format) |
 | Shift-Right-click | Open the Settings panel |
 
 ## Configuration
@@ -111,6 +117,13 @@ Issues and pull requests are welcome.
 [GPL-2.0](LICENSE)
 
 ## Changelog
+
+### v0.9.2-beta
+
+Visual polish.
+
+- Broker text: coordinates now wrapped in parentheses — `Zone (X.XX, Y.YY)` — for clearer separation from the zone label
+- Minimap coordinate overlay: anchored below the minimap frame instead of inside it; uses the default `GameFontNormalSmall` size cleanly
 
 ### v0.9.0-beta
 
