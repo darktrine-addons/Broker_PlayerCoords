@@ -96,7 +96,7 @@ Issues and pull requests are welcome.
 
 ## License
 
-[GPL-2.0](LICENSE)
+Licensed under [GPL-2.0](https://www.gnu.org/licenses/gpl-2.0.html). The full license text is in the `LICENSE` file in the source distribution.
 
 ## Changelog
 
