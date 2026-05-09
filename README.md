@@ -34,13 +34,11 @@ For manual installation:
 
 All interactions are on the broker bar button:
 
-| Input | Action |
-|---|---|
-| Left-click | Toggle the World Map |
-| Shift-Left-click | Insert a waypoint hyperlink into the active chat box |
-| Ctrl-Left-click | Copy `Zone X.XX, Y.YY` to the system clipboard (dialog fallback if `C_Clipboard` is unavailable) |
-| Ctrl-Shift-Left-click | Copy a `/way` command to the system clipboard (Blizzard waypoint / TomTom-compatible format) |
-| Shift-Right-click | Open the Settings panel |
+- **Left-click** — Toggle the World Map
+- **Shift-Left-click** — Insert a waypoint hyperlink into the active chat box
+- **Ctrl-Left-click** — Copy `Zone X.XX, Y.YY` to the system clipboard (dialog fallback if `C_Clipboard` is unavailable)
+- **Ctrl-Shift-Left-click** — Copy a `/way` command to the system clipboard (Blizzard waypoint / TomTom-compatible format)
+- **Shift-Right-click** — Open the Settings panel
 
 ## Configuration
 
@@ -48,55 +46,39 @@ Open the settings panel via **Shift-Right-click** on the broker button, or via *
 
 ### Broker Bar
 
-| Setting | Default | Description |
-|---|---|---|
-| Coordinate precision | 2 decimals | Number of decimal places shown everywhere (0, 1, or 2) |
-| Show zone name | On | Display the current zone in the broker text |
-| Show subzone name | Off | Append the subzone (e.g. "Stormwind: Trade District") |
-| Show facing direction | Off | Append an 8-point compass label after the coordinates |
-| Update rate while moving | Normal (2×/sec) | How often coordinates refresh during movement |
+- **Coordinate precision** *(default: 2 decimals)* — Number of decimal places shown everywhere (0, 1, or 2)
+- **Show zone name** *(default: On)* — Display the current zone in the broker text
+- **Show subzone name** *(default: Off)* — Append the subzone (e.g. "Stormwind: Trade District")
+- **Show facing direction** *(default: Off)* — Append an 8-point compass label after the coordinates
+- **Update rate while moving** *(default: Normal, 2×/sec)* — How often coordinates refresh during movement
 
 ### Minimap
 
-| Setting | Default | Description |
-|---|---|---|
-| Show coordinates near minimap | Off | Small coordinate overlay at the bottom of the minimap |
-| Show cursor coordinates on world map | On | Live coordinates under your cursor on the world map |
+- **Show coordinates near minimap** *(default: Off)* — Small coordinate overlay at the bottom of the minimap
+- **Show cursor coordinates on world map** *(default: On)* — Live coordinates under your cursor on the world map
 
 ### Tooltip
 
-| Setting | Default | Description |
-|---|---|---|
-| Show continent | On | Continent name row in the tooltip |
-| Show difficulty | On | Zone or instance difficulty row (with M+ key level / Delve tier) |
-| Show item level | On | Equipped iLvl vs. recommended (instances only, when data is available) |
+- **Show continent** *(default: On)* — Continent name row in the tooltip
+- **Show difficulty** *(default: On)* — Zone or instance difficulty row (with M+ key level / Delve tier)
+- **Show item level** *(default: On)* — Equipped iLvl vs. recommended (instances only, when data is available)
 
 ## Technical Details
 
 ### File Structure
 
-```text
-Broker_PlayerCoords/
-├── Broker_PlayerCoords.toc     # Addon metadata and load order
-├── Core.lua                    # Broker object, event handling, tooltip, click logic
-├── Settings.lua                # Saved-variable defaults and Settings panel registration
-├── Locales/
-│   └── Locales.xml             # Locale file manifest (enUS baseline)
-└── Libs/
-    ├── LibStub/
-    ├── CallbackHandler-1.0/
-    ├── LibDataBroker-1.1/
-    └── LibDBIcon-1.0/
-```
+- `Broker_PlayerCoords.toc` — Addon metadata and load order
+- `Core.lua` — Broker object, event handling, tooltip, click logic
+- `Settings.lua` — Saved-variable defaults and Settings panel registration
+- `Locales/Locales.xml` — Locale file manifest (enUS baseline)
+- `Libs/` — bundled libraries: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0
 
 ### Events Handled
 
-| Event | Purpose |
-|---|---|
-| `ADDON_LOADED` | Initialize saved variables, register LibDBIcon, build Settings panel |
-| `PLAYER_ENTERING_WORLD` | Force coordinate refresh on login / instance transitions |
-| `ZONE_CHANGED` / `ZONE_CHANGED_INDOORS` / `ZONE_CHANGED_NEW_AREA` | Refresh zone text and coordinates |
-| `PLAYER_STARTED_MOVING` / `PLAYER_STOPPED_MOVING` | Switch between throttled OnUpdate polling and immediate refresh |
+- `ADDON_LOADED` — Initialize saved variables, register LibDBIcon, build Settings panel
+- `PLAYER_ENTERING_WORLD` — Force coordinate refresh on login / instance transitions
+- `ZONE_CHANGED` / `ZONE_CHANGED_INDOORS` / `ZONE_CHANGED_NEW_AREA` — Refresh zone text and coordinates
+- `PLAYER_STARTED_MOVING` / `PLAYER_STOPPED_MOVING` — Switch between throttled OnUpdate polling and immediate refresh
 
 ### Saved Variables
 
