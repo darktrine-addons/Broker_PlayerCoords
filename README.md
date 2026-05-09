@@ -100,6 +100,12 @@ Licensed under [GPL-2.0](https://www.gnu.org/licenses/gpl-2.0.html). The full li
 
 ## Changelog
 
+### v1.0.0
+
+First stable release. No functional changes from v0.9.2-beta.
+
+- Publishing pipeline: CurseForge and Wago.io automated via BigWigsMods packager on tag push
+
 ### v0.9.2-beta
 
 Visual polish.
