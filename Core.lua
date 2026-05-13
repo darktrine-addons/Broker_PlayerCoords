@@ -16,6 +16,23 @@ local broker = LDB:NewDataObject("Broker_PlayerCoords", {
 })
 ns.broker = broker  -- exposed for LibDBIcon registration in Settings.lua
 
+-- ── private tooltip frame ────────────────────────────────────────────────────
+-- 12.x "addon apocalypse": reading C_Map.GetPlayerMapPosition / map info and
+-- formatting the coordinates (arithmetic on pos.x / pos.y) taints our Lua
+-- control flow. If we then write the resulting strings into the SHARED
+-- GameTooltip, the tooltip becomes globally tainted — every subsequent
+-- Blizzard operation on GameTooltip (our Hide, their own tooltips, widget
+-- cleanup) inherits the taint and can trigger "attempt to compare a secret
+-- number value" errors deep in layout code.
+--
+-- Containment: use a dedicated GameTooltipTemplate frame for our own UI.
+-- Identical look and AddLine/AddDoubleLine behaviour as the shared one,
+-- but Blizzard never touches it, so our taint stays scoped.
+local Tooltip = CreateFrame("GameTooltip",
+                            "BrokerPlayerCoordsTooltip",
+                            UIParent,
+                            "GameTooltipTemplate")
+
 -- ── tooltip colors ────────────────────────────────────────────────────────────
 -- teal for static labels, white for dynamic values, dark-orange for interaction hints
 local CL_r, CL_g, CL_b = 0.40, 0.80, 0.80   -- teal   (label)
@@ -372,30 +389,30 @@ broker.OnEnter = function(self)
 
     -- Anchor below the bar when in the top half, above when in the bottom half.
     local _, frameY = self:GetCenter()
-    GameTooltip:SetOwner(self, "ANCHOR_NONE")
+    Tooltip:SetOwner(self, "ANCHOR_NONE")
     if frameY and frameY > (GetScreenHeight() / 2) then
-        GameTooltip:SetPoint("TOPLEFT", self, "BOTTOMLEFT")
+        Tooltip:SetPoint("TOPLEFT", self, "BOTTOMLEFT")
     else
-        GameTooltip:SetPoint("BOTTOMLEFT", self, "TOPLEFT")
+        Tooltip:SetPoint("BOTTOMLEFT", self, "TOPLEFT")
     end
 
     -- Header: zone (always), subzone on its own line when present and distinct.
-    GameTooltip:SetText(zone, CV_r, CV_g, CV_b)
+    Tooltip:SetText(zone, CV_r, CV_g, CV_b)
     if subzone ~= "" and subzone ~= zone then
-        GameTooltip:AddLine(subzone, CV_r, CV_g, CV_b)
+        Tooltip:AddLine(subzone, CV_r, CV_g, CV_b)
     end
 
     -- Detail block.
-    GameTooltip:AddLine(" ")
+    Tooltip:AddLine(" ")
     if db.showContinent ~= false then
-        GameTooltip:AddDoubleLine("Continent",  continent,  CL_r, CL_g, CL_b, CV_r,  CV_g,  CV_b  )
+        Tooltip:AddDoubleLine("Continent",  continent,  CL_r, CL_g, CL_b, CV_r,  CV_g,  CV_b  )
     end
-    GameTooltip:AddDoubleLine("Status",     pvp[1],     CL_r, CL_g, CL_b, pvp[2],pvp[3],pvp[4])
+    Tooltip:AddDoubleLine("Status",     pvp[1],     CL_r, CL_g, CL_b, pvp[2],pvp[3],pvp[4])
     if db.showDifficulty ~= false then
-        GameTooltip:AddDoubleLine("Difficulty", diffLabel,  CL_r, CL_g, CL_b, diffR, diffG, diffB )
+        Tooltip:AddDoubleLine("Difficulty", diffLabel,  CL_r, CL_g, CL_b, diffR, diffG, diffB )
     end
     if pos then
-        GameTooltip:AddDoubleLine("Coordinates", FmtCoords(pos.x, pos.y), CL_r, CL_g, CL_b, CV_r, CV_g, CV_b)
+        Tooltip:AddDoubleLine("Coordinates", FmtCoords(pos.x, pos.y), CL_r, CL_g, CL_b, CV_r, CV_g, CV_b)
     end
 
     -- Item level row: only inside instances, only when a recommended ilvl is known, and only if enabled.
@@ -403,27 +420,27 @@ broker.OnEnter = function(self)
         local equipped, recommended            = GetInstanceIlvlInfo()
         local ilvlLabel, ilvlValue, ir, ig, ib = FormatIlvl(equipped, recommended)
         if ilvlLabel then
-            GameTooltip:AddDoubleLine(ilvlLabel, ilvlValue, CL_r, CL_g, CL_b, ir, ig, ib)
+            Tooltip:AddDoubleLine(ilvlLabel, ilvlValue, CL_r, CL_g, CL_b, ir, ig, ib)
         end
     end
 
     -- Interaction hints: keyword in orange, description in white.
-    GameTooltip:AddLine(" ")
-    GameTooltip:AddDoubleLine("Click",            "open the World Map",      CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
-    GameTooltip:AddDoubleLine("Shift-Click",      "share location in chat",  CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
-    GameTooltip:AddDoubleLine("Ctrl-Click",       "copy coordinates",        CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
-    GameTooltip:AddDoubleLine("Ctrl-Shift-Click", "copy /way command",       CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
-    GameTooltip:AddDoubleLine("Shift-RightClick", "open settings",           CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    Tooltip:AddLine(" ")
+    Tooltip:AddDoubleLine("Click",            "open the World Map",      CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    Tooltip:AddDoubleLine("Shift-Click",      "share location in chat",  CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    Tooltip:AddDoubleLine("Ctrl-Click",       "copy coordinates",        CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    Tooltip:AddDoubleLine("Ctrl-Shift-Click", "copy /way command",       CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
+    Tooltip:AddDoubleLine("Shift-RightClick", "open settings",           CH_r, CH_g, CH_b, CV_r, CV_g, CV_b)
 
     -- Footer: addon name + version, right-aligned, faint grey.
-    GameTooltip:AddLine(" ")
-    GameTooltip:AddDoubleLine("", "Broker: Coords  v" .. addonVersion, 0, 0, 0, 0.45, 0.45, 0.45)
+    Tooltip:AddLine(" ")
+    Tooltip:AddDoubleLine("", "Broker: Coords  v" .. addonVersion, 0, 0, 0, 0.45, 0.45, 0.45)
 
-    GameTooltip:Show()
+    Tooltip:Show()
 end
 
 broker.OnLeave = function(self)
-    GameTooltip:Hide()
+    Tooltip:Hide()
 end
 
 broker.OnClick = function(self, button)
