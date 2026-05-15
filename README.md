@@ -1,17 +1,17 @@
 # Broker: Coords
 
-A featherweight [LibDataBroker](https://www.wowace.com/projects/libdatabroker-1-1) plugin that surfaces your current zone and coordinates in any broker bar.
+**A featherweight zone + coordinates display with a tooltip that earns its keep.** Zone, subzone, coords, and 8-point compass facing on the bar; continent, PvP status, Mythic+ key level, Delve tier, and instance item level vs. recommended in the tooltip — plus one-click World Map, chat waypoint sharing, and clipboard copy of coordinates or a ready-to-paste `/way` command.
 
-The differentiator is the tooltip: continent, PvP status, Mythic+ key level, Delve tier, and instance item level vs. recommended — with click handlers for World Map, chat waypoint sharing, and one-key clipboard copy of coordinates or a `/way` command.
+**Use it from your broker bar or from the built-in minimap button** — both are first-class entry points, and either can be toggled off if you only want one. No broker bar host? No problem. Have one already (Arcana, ElvUI, Bazooka, TitanPanel...)? Drop the minimap icon and use the bar entry instead.
 
-Retail only. Requires Midnight (Interface 120005+) and a broker host such as Arcana (recommended), ElvUI, Bazooka, Broker2FuBar, or TitanPanel.
+Retail only. Requires Midnight (Interface 120005+); a broker bar host is optional.
 
 ## Features
 
 - **Broker bar text**: zone name, optional subzone, coordinates, and optional 8-point compass direction (N / NE / E …)
 - **Configurable precision**: 0, 1, or 2 decimal places on all coordinate displays
 - **Throttled updates**: smooth coordinate refresh while moving (fast / normal / slow), event-driven when standing still
-- **Minimap button**: drag-to-reposition minimap icon via LibDBIcon; right-click to show or hide
+- **Optional minimap button**: on by default, one-toggle off in settings for those keeping the minimap edge clear; drag-to-reposition via LibDBIcon
 - **Minimap coordinate overlay**: optional small coordinate readout at the bottom of the minimap
 - **World map cursor coordinates**: live coordinates under the cursor while the world map is open
 - **Rich tooltip**: zone header, continent, PvP status, tiered difficulty (Mythic+ key level, Delve tier), instance item level vs. recommended, and interaction hints
@@ -32,7 +32,7 @@ For manual installation:
 
 ## Click Interactions
 
-All interactions are on the broker bar button:
+Interactions work identically on the broker bar entry and the minimap button — whichever you keep visible:
 
 - **Left-click** — Toggle the World Map
 - **Shift-Left-click** — Insert a waypoint hyperlink into the active chat box
@@ -54,6 +54,7 @@ Open the settings panel via **Shift-Right-click** on the broker button, or via *
 
 ### Minimap
 
+- **Show minimap button** *(default: On)* — Show the Broker: Coords minimap button. Most users with a broker bar host (Arcana, ElvUI, Bazooka, etc.) prefer turning this off to keep the minimap edge clear.
 - **Show coordinates near minimap** *(default: Off)* — Small coordinate overlay at the bottom of the minimap
 - **Show cursor coordinates on world map** *(default: On)* — Live coordinates under your cursor on the world map
 
@@ -88,7 +89,7 @@ Open the settings panel via **Shift-Right-click** on the broker button, or via *
 
 - **WoW Version**: Retail (Midnight, Interface 120005+)
 - **Dependencies**: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0 (all bundled)
-- **Broker display**: any LDB-compatible display (ElvUI, Bazooka, Broker2FuBar, TitanPanel, etc.)
+- **Broker display**: **optional** — any LDB-compatible host works (Arcana, ElvUI, Bazooka, Broker2FuBar, TitanPanel, etc.). If you don't run one, the built-in minimap button is a full-equivalent entry point on its own.
 
 ## Contributing
 
@@ -99,6 +100,11 @@ Issues and pull requests are welcome.
 Licensed under [GPL-2.0](https://www.gnu.org/licenses/gpl-2.0.html). The full license text is in the `LICENSE` file in the source distribution.
 
 ## Changelog
+
+### v1.1.0
+
+- Minimap button is now configurable via *Settings → Minimap*. On by default; toggle off to declutter your minimap edge. Existing users keep their current visibility — if you had hidden the icon via LibDBIcon's right-click menu, the new setting starts in that same state.
+- README clarifies that Broker: Coords works without a broker bar — the minimap button is a full-equivalent entry point.
 
 ### v1.0.0
 

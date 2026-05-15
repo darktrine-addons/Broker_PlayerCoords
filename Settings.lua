@@ -13,6 +13,7 @@ local defaults = {
     showFacing     = false,  -- append compass direction (N/NE/E/…) after coordinates
     throttle       = 0.5,    -- coordinate update interval while moving (seconds)
     -- Minimap
+    showMinimapButton  = true,   -- on by default; users who want a clean minimap can opt out
     showMinimapCoords  = false,  -- coordinate text overlay at bottom of minimap
     showWorldMapCursor = true,   -- cursor coordinates shown on the world map
     -- Tooltip
@@ -29,13 +30,29 @@ sf:SetScript("OnEvent", function(self, event, name)
 
     Broker_PlayerCoordsDB = Broker_PlayerCoordsDB or {}
     local db = Broker_PlayerCoordsDB
+
+    -- One-shot migration: pre-v1.1 versions exposed no Settings checkbox for
+    -- the minimap button — visibility was driven solely by LibDBIcon's
+    -- right-click menu, which writes to db.minimapIcon.hide. Now that
+    -- showMinimapButton is the authoritative setting, seed it from the
+    -- existing hide flag so users who had toggled the icon off keep it off
+    -- (and those who left it on keep it on). Runs before the defaults loop
+    -- so the default doesn't clobber the migrated value.
+    if db.showMinimapButton == nil and db.minimapIcon then
+        db.showMinimapButton = not db.minimapIcon.hide
+    end
+
     db.minimapIcon = db.minimapIcon or { hide = false }  -- sub-table; managed by LibDBIcon
     for k, v in pairs(defaults) do
         if db[k] == nil then db[k] = v end
     end
     ns.db = db
 
-    -- Register minimap button (LibDBIcon manages show/hide via its own right-click menu).
+    -- The Settings checkbox is authoritative over the icon's visibility — sync it
+    -- into LibDBIcon's persistent hide flag before registering. (LibDBIcon owns the
+    -- db.minimapIcon table for icon position too; we only drive the hide field.)
+    db.minimapIcon.hide = not db.showMinimapButton
+
     local LibDBIcon = LibStub("LibDBIcon-1.0", true)
     if LibDBIcon and ns.broker then
         LibDBIcon:Register("Broker_PlayerCoords", ns.broker, db.minimapIcon)
@@ -105,6 +122,24 @@ sf:SetScript("OnEvent", function(self, event, name)
 
     Settings.RegisterInitializer(category,
         CreateSettingsListSectionHeaderInitializer("Minimap", nil))
+
+    -- Show minimap button
+    local showMinimapSetting = Settings.RegisterAddOnSetting(
+        category, addonName .. "_showMinimapButton", "showMinimapButton", db,
+        Settings.VarType.Boolean, "Show minimap button", defaults.showMinimapButton)
+    showMinimapSetting:SetValueChangedCallback(function()
+        db.minimapIcon.hide = not db.showMinimapButton
+        local LDBIcon = LibStub("LibDBIcon-1.0", true)
+        if LDBIcon then
+            if db.showMinimapButton then
+                LDBIcon:Show("Broker_PlayerCoords")
+            else
+                LDBIcon:Hide("Broker_PlayerCoords")
+            end
+        end
+    end)
+    Settings.CreateCheckbox(category, showMinimapSetting,
+        "Show the Broker: Coords minimap button. On by default. Most users with a broker bar host (Arcana, ElvUI, Bazooka, etc.) prefer turning this off to keep the minimap edge clear.")
 
     -- Show coordinates near minimap
     local minimapCoordsSetting = Settings.RegisterAddOnSetting(
