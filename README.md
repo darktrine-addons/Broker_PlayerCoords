@@ -101,6 +101,21 @@ Licensed under [GPL-2.0](https://www.gnu.org/licenses/gpl-2.0.html). The full li
 
 ## Changelog
 
+### v1.1.2 — copy dialog restyle + tooltip footer polish
+
+**Improvements:**
+- **The copy/paste dialog adopts a modern dark "smoke-glass" look** — solid dark backdrop, thin amber accent border, amber title, subtle separators, and a minimal `×` close button with an `esc` hint. Shared visual language with Broker_MidnightEvents. The editbox keeps a high-contrast dark fill so the coordinate string stays fully legible for `Ctrl-C`. Reachable when your client lacks `C_Clipboard` (the dialog is the fallback path for Ctrl-Click "Copy Coordinates" and Ctrl-Shift-Click "Copy /way Command").
+- **ESC closes the copy dialog**, alongside the existing Enter binding.
+
+**Fixes:**
+- **Tooltip footer no longer prints `vv1.1.x`** — the format string dropped a stray `v` prefix that doubled up with the packager-substituted version.
+
+### v1.1.1 — tooltip footer fix
+
+**Fixes:**
+- **Tooltip footer renders the version cleanly** (`Broker: Coords v1.1.1` instead of `vv1.1.1`).
+- **Raw source checkouts** show `Broker: Coords dev` instead of the unsubstituted `@project-version@` placeholder.
+
 ### v1.1.0
 
 - Minimap button is now configurable via *Settings → Minimap*. On by default; toggle off to declutter your minimap edge. Existing users keep their current visibility — if you had hidden the icon via LibDBIcon's right-click menu, the new setting starts in that same state.
