@@ -43,6 +43,22 @@ local CL_r, CL_g, CL_b = 0.40, 0.80, 0.80   -- teal   (label)
 local CV_r, CV_g, CV_b = 1.00, 1.00, 1.00   -- white  (value)
 local CH_r, CH_g, CH_b = 1.00, 0.60, 0.10   -- orange (hint keyword)
 
+-- ── Smoke-glass design tokens ────────────────────────────────────────────────
+-- Visual language shared with Broker_MidnightEvents + the Mythforge web UI:
+-- dark zinc backdrop, amber accent border + title, zinc-tone separators.
+-- backdrop-blur isn't reachable from WoW Lua; approximate with a solid
+-- dark colour + tunable alpha. Border = 4 thin line textures tinted
+-- amber-700/0.3.
+local STYLE = {
+    bgR = 0.035, bgG = 0.035, bgB = 0.043,           -- zinc-950 #09090b
+    borderR = 0.71, borderG = 0.33, borderB = 0.04,  -- amber-700 #b45309
+    borderAlpha   = 0.30,                            -- /30
+    titleR = 0.99, titleG = 0.83, titleB = 0.30,     -- amber-300 #fcd34d
+    sepR = 0.16, sepG = 0.16, sepB = 0.17,           -- zinc-800 #27272a
+    headerR = 0.45, headerG = 0.46, headerB = 0.50,  -- zinc-500 #71717a
+    textR = 0.89, textG = 0.89, textB = 0.91,        -- zinc-200 #e4e4e7
+}
+
 local PVP_STATUS = {
     [""]      = { "None",      1.00, 1.00, 1.00 },
     sanctuary = { "Sanctuary", 0.41, 0.80, 0.94 },  -- sky-blue
@@ -316,51 +332,147 @@ SetupWorldMapCursor = function()
 end
 
 -- ── clipboard copy ────────────────────────────────────────────────────────────
--- Fallback when C_Clipboard is unavailable: a standard WoW dialog with a pre-selected
--- EditBox. Built lazily on first use; we own editBox so SetText is always reliable.
+-- Fallback when C_Clipboard is unavailable: a smoke-glass dialog with a
+-- pre-selected EditBox. The visual language matches Broker_MidnightEvents'
+-- Alts panel + the Mythforge web UI — dark zinc backdrop, amber accent
+-- border + title, zinc-tone separators.
+--
+-- Built from scratch (no BasicFrameTemplateWithInset): the template's
+-- child Inset frame draws its own nine-slice backdrop that can't be
+-- cleanly erased, so we own every pixel here.
+--
+-- One physical frame reused for both copy contexts (coords / /way), title
+-- swapped per call. Lazily constructed on first use.
 local copyFrame
-local copyFrameTitle  -- cached reference to the title FontString
 
 local function ShowCopyDialog(text, title)
     if not copyFrame then
-        local f = CreateFrame("Frame", "BrokerCoordsCopyFrame", UIParent,
-                              "BasicFrameTemplateWithInset")
-        f:SetSize(380, 100)
+        local f = CreateFrame("Frame", "BrokerCoordsCopyFrame", UIParent)
+        f:SetSize(380, 110)
         f:SetPoint("CENTER", 0, 80)
+        f:SetFrameStrata("HIGH")
         f:SetMovable(true)
         f:EnableMouse(true)
         f:RegisterForDrag("LeftButton")
+        f:SetClampedToScreen(true)
         f:SetScript("OnDragStart", f.StartMoving)
         f:SetScript("OnDragStop",  f.StopMovingOrSizing)
 
-        -- Cache the title FontString so we can update it on each call.
-        copyFrameTitle = f.TitleText
-                      or (f.TitleContainer and f.TitleContainer.TitleText)
+        -- Solid dark backdrop, full panel.
+        f.Bg = f:CreateTexture(nil, "BACKGROUND")
+        f.Bg:SetAllPoints(f)
+        f.Bg:SetColorTexture(STYLE.bgR, STYLE.bgG, STYLE.bgB, 1)
 
-        -- Close button already provided by the template; wire it to Hide.
-        if f.CloseButton then
-            f.CloseButton:SetScript("OnClick", function() f:Hide() end)
+        -- Four 1px amber lines forming the edge.
+        local function edge(parent)
+            local t = parent:CreateTexture(nil, "BORDER")
+            t:SetColorTexture(STYLE.borderR, STYLE.borderG, STYLE.borderB,
+                              STYLE.borderAlpha)
+            return t
         end
+        f.borderT = edge(f); f.borderT:SetPoint("TOPLEFT",     f, "TOPLEFT",     0, 0)
+                             f.borderT:SetPoint("TOPRIGHT",    f, "TOPRIGHT",    0, 0)
+                             f.borderT:SetHeight(1)
+        f.borderB = edge(f); f.borderB:SetPoint("BOTTOMLEFT",  f, "BOTTOMLEFT",  0, 0)
+                             f.borderB:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, 0)
+                             f.borderB:SetHeight(1)
+        f.borderL = edge(f); f.borderL:SetPoint("TOPLEFT",     f, "TOPLEFT",     0, 0)
+                             f.borderL:SetPoint("BOTTOMLEFT",  f, "BOTTOMLEFT",  0, 0)
+                             f.borderL:SetWidth(1)
+        f.borderR = edge(f); f.borderR:SetPoint("TOPRIGHT",    f, "TOPRIGHT",    0, 0)
+                             f.borderR:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", 0, 0)
+                             f.borderR:SetWidth(1)
 
-        -- Hint line
-        local hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        hint:SetPoint("TOPLEFT", f, "TOPLEFT", 16, -32)
-        hint:SetTextColor(0.6, 0.6, 0.6)
-        hint:SetText("Ctrl-C to copy  \226\128\148  Enter or Esc to close")  -- em-dash
+        -- Title text — amber, anchored at top center.
+        f.TitleText = f:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        f.TitleText:SetPoint("TOP", f, "TOP", 0, -8)
+        f.TitleText:SetTextColor(STYLE.titleR, STYLE.titleG, STYLE.titleB)
 
-        -- EditBox with standard WoW input styling
-        local eb = CreateFrame("EditBox", nil, f, "InputBoxTemplate")
-        eb:SetPoint("TOPLEFT",     f, "TOPLEFT",     16, -52)
-        eb:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -16,  14)
+        -- Title bar separator — thin zinc line under the title (≈28px down).
+        f.titleSep = f:CreateTexture(nil, "ARTWORK")
+        f.titleSep:SetColorTexture(STYLE.sepR, STYLE.sepG, STYLE.sepB, 1)
+        f.titleSep:SetPoint("TOPLEFT",  f, "TOPLEFT",   1, -28)
+        f.titleSep:SetPoint("TOPRIGHT", f, "TOPRIGHT", -1, -28)
+        f.titleSep:SetHeight(1)
+
+        -- Close button — minimal × glyph in the top-right corner, zinc-500
+        -- default, lifts to amber on hover alongside the "esc" hint.
+        f.CloseButton = CreateFrame("Button", nil, f)
+        f.CloseButton:SetSize(22, 22)
+        f.CloseButton:SetPoint("TOPRIGHT", f, "TOPRIGHT", -6, -4)
+        f.CloseButton.text = f.CloseButton:CreateFontString(nil, "OVERLAY",
+                                                            "GameFontNormalLarge")
+        f.CloseButton.text:SetAllPoints(f.CloseButton)
+        f.CloseButton.text:SetText("\195\151")  -- × U+00D7
+        f.CloseButton.text:SetTextColor(STYLE.headerR, STYLE.headerG, STYLE.headerB)
+        f.CloseButton:SetScript("OnEnter", function(self)
+            self.text:SetTextColor(STYLE.titleR, STYLE.titleG, STYLE.titleB)
+            f.CloseHint:SetTextColor(STYLE.titleR, STYLE.titleG, STYLE.titleB)
+        end)
+        f.CloseButton:SetScript("OnLeave", function(self)
+            self.text:SetTextColor(STYLE.headerR, STYLE.headerG, STYLE.headerB)
+            f.CloseHint:SetTextColor(STYLE.headerR, STYLE.headerG, STYLE.headerB)
+        end)
+        f.CloseButton:SetScript("OnClick", function() f:Hide() end)
+
+        -- "esc" hint anchored left of the close button. Hover on the close
+        -- button lifts both to amber so they read as the same affordance.
+        f.CloseHint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        f.CloseHint:SetPoint("RIGHT", f.CloseButton, "LEFT", -2, 0)
+        f.CloseHint:SetText("esc")
+        f.CloseHint:SetTextColor(STYLE.headerR, STYLE.headerG, STYLE.headerB)
+
+        -- ESC closes the panel.
+        tinsert(UISpecialFrames, "BrokerCoordsCopyFrame")
+
+        -- Instruction line below the title separator.
+        f.hint = f:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+        f.hint:SetPoint("TOPLEFT", f, "TOPLEFT", 12, -38)
+        f.hint:SetTextColor(STYLE.headerR, STYLE.headerG, STYLE.headerB)
+        f.hint:SetText("Ctrl-C to copy  \226\128\148  Enter or Esc to close")  -- em-dash
+
+        -- EditBox: built from scratch so we can apply the smoke-glass tokens.
+        -- InputBoxTemplate ships its own Left/Middle/Right backdrop textures
+        -- that don't tint cleanly, so we draw our own bg + border instead.
+        local eb = CreateFrame("EditBox", nil, f)
+        eb:SetPoint("TOPLEFT",     f, "TOPLEFT",     12, -60)
+        eb:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -12,  12)
+        eb:SetFontObject("ChatFontNormal")
         eb:SetAutoFocus(true)
+        eb:SetTextInsets(8, 8, 4, 4)
+        eb:SetTextColor(STYLE.textR, STYLE.textG, STYLE.textB)
         eb:SetScript("OnEscapePressed", function() f:Hide() end)
         eb:SetScript("OnEnterPressed",  function() f:Hide() end)
+
+        -- EditBox backdrop — bg-zinc-900 #18181b.
+        eb.bg = eb:CreateTexture(nil, "BACKGROUND")
+        eb.bg:SetAllPoints(eb)
+        eb.bg:SetColorTexture(0.094, 0.094, 0.106, 1)
+
+        -- EditBox 1px borders — zinc-700 #3f3f46.
+        local function ebEdge()
+            local t = eb:CreateTexture(nil, "BORDER")
+            t:SetColorTexture(0.247, 0.247, 0.275, 1)
+            return t
+        end
+        eb.borderT = ebEdge(); eb.borderT:SetPoint("TOPLEFT",     eb, "TOPLEFT",     0, 0)
+                               eb.borderT:SetPoint("TOPRIGHT",    eb, "TOPRIGHT",    0, 0)
+                               eb.borderT:SetHeight(1)
+        eb.borderB = ebEdge(); eb.borderB:SetPoint("BOTTOMLEFT",  eb, "BOTTOMLEFT",  0, 0)
+                               eb.borderB:SetPoint("BOTTOMRIGHT", eb, "BOTTOMRIGHT", 0, 0)
+                               eb.borderB:SetHeight(1)
+        eb.borderL = ebEdge(); eb.borderL:SetPoint("TOPLEFT",     eb, "TOPLEFT",     0, 0)
+                               eb.borderL:SetPoint("BOTTOMLEFT",  eb, "BOTTOMLEFT",  0, 0)
+                               eb.borderL:SetWidth(1)
+        eb.borderR = ebEdge(); eb.borderR:SetPoint("TOPRIGHT",    eb, "TOPRIGHT",    0, 0)
+                               eb.borderR:SetPoint("BOTTOMRIGHT", eb, "BOTTOMRIGHT", 0, 0)
+                               eb.borderR:SetWidth(1)
 
         f.editBox = eb
         copyFrame = f
     end
 
-    if copyFrameTitle then copyFrameTitle:SetText(title or "Copy Coordinates") end
+    copyFrame.TitleText:SetText(title or "Copy Coordinates")
     copyFrame.editBox:SetText(text)
     copyFrame.editBox:HighlightText()
     copyFrame:Show()
