@@ -101,48 +101,4 @@ Licensed under [GPL-2.0](https://www.gnu.org/licenses/gpl-2.0.html). The full li
 
 ## Changelog
 
-### v1.1.2 — copy dialog restyle + tooltip footer polish
-
-**Improvements:**
-- **The copy/paste dialog adopts a modern dark "smoke-glass" look** — solid dark backdrop, thin amber accent border, amber title, subtle separators, and a minimal `×` close button with an `esc` hint. Shared visual language with Broker_MidnightEvents. The editbox keeps a high-contrast dark fill so the coordinate string stays fully legible for `Ctrl-C`. Reachable when your client lacks `C_Clipboard` (the dialog is the fallback path for Ctrl-Click "Copy Coordinates" and Ctrl-Shift-Click "Copy /way Command").
-- **ESC closes the copy dialog**, alongside the existing Enter binding.
-
-**Fixes:**
-- **Tooltip footer no longer prints `vv1.1.x`** — the format string dropped a stray `v` prefix that doubled up with the packager-substituted version.
-
-### v1.1.1 — tooltip footer fix
-
-**Fixes:**
-- **Tooltip footer renders the version cleanly** (`Broker: Coords v1.1.1` instead of `vv1.1.1`).
-- **Raw source checkouts** show `Broker: Coords dev` instead of the unsubstituted `@project-version@` placeholder.
-
-### v1.1.0
-
-- Minimap button is now configurable via *Settings → Minimap*. On by default; toggle off to declutter your minimap edge. Existing users keep their current visibility — if you had hidden the icon via LibDBIcon's right-click menu, the new setting starts in that same state.
-- README clarifies that Broker: Coords works without a broker bar — the minimap button is a full-equivalent entry point.
-
-### v1.0.0
-
-First stable release. No functional changes from v0.9.2-beta.
-
-- Publishing pipeline: CurseForge and Wago.io automated via BigWigsMods packager on tag push
-
-### v0.9.2-beta
-
-Visual polish.
-
-- Broker text: coordinates now wrapped in parentheses — `Zone (X.XX, Y.YY)` — for clearer separation from the zone label
-- Minimap coordinate overlay: anchored below the minimap frame instead of inside it; uses the default `GameFontNormalSmall` size cleanly
-
-### v0.9.0-beta
-
-Initial public beta.
-
-- Broker bar: zone, subzone, coordinates (0/1/2 dp), 8-point compass facing direction
-- Configurable update throttle (fast / normal / slow)
-- LibDBIcon minimap button with drag-to-reposition
-- Minimap coordinate text overlay (off by default)
-- World map cursor coordinate overlay (on by default)
-- Tooltip: continent, PvP status, tiered difficulty (M+ key level, Delve tier), instance iLvl vs. recommended, interaction hints
-- Click handlers: world map toggle, chat waypoint, copy coordinates, copy `/way` command
-- Native WoW Settings panel with three sections (Broker Bar, Minimap, Tooltip)
+See [CHANGELOG.md](https://github.com/darktrine-addons/Broker_PlayerCoords/blob/main/CHANGELOG.md) for the full version history. The notes for each release are also posted with the download on CurseForge and Wago.
