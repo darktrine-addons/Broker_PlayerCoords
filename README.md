@@ -1,4 +1,4 @@
-# Broker: Coords
+# Broker: PlayerCoords
 
 **A featherweight zone + coordinates display with a tooltip that earns its keep.** Zone, subzone, coords, and 8-point compass facing on the bar; continent, PvP status, Mythic+ key level, Delve tier, and instance item level vs. recommended in the tooltip — plus one-click World Map, chat waypoint sharing, and clipboard copy of coordinates or a ready-to-paste `/way` command.
 
