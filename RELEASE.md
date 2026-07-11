@@ -1,5 +1,5 @@
-## v1.1.3 — 2026-06-03
+## v1.1.4 — 2026-07-11
 
-- chore: release notes are now posted per-version to CurseForge and Wago; the full history lives in CHANGELOG.md.
+- chore: updated for WoW patch **12.0.7** (Interface 120007). No functional changes — every API the addon uses is unchanged in 12.0.7.
 
-[Full Changelog](https://github.com/darktrine-addons/Broker_PlayerCoords/compare/v1.1.2...v1.1.3) · [All Releases](https://github.com/darktrine-addons/Broker_PlayerCoords/releases) · [Changelog](https://github.com/darktrine-addons/Broker_PlayerCoords/blob/main/CHANGELOG.md)
+[Full Changelog](https://github.com/darktrine-addons/Broker_PlayerCoords/compare/v1.1.3...v1.1.4) · [All Releases](https://github.com/darktrine-addons/Broker_PlayerCoords/releases) · [Changelog](https://github.com/darktrine-addons/Broker_PlayerCoords/blob/main/CHANGELOG.md)
