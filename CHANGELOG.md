@@ -3,6 +3,10 @@
 User-facing changes, newest first. Internal and dev-tooling work lives in the
 git history, not here.
 
+## [v1.1.6](https://github.com/darktrine-addons/Broker_PlayerCoords/releases/tag/v1.1.6) — 2026-11-22
+
+- chore: updated for WoW patch **12.1.5**, and ready for **12.1.7** (Interface 120105, 120107). No functional changes.
+
 ## [v1.1.5](https://github.com/darktrine-addons/Broker_PlayerCoords/releases/tag/v1.1.5) — 2026-08-16
 
 - chore: updated for WoW patch **12.1.0** (Interface 120100). No functional changes — every API the addon uses is unchanged in 12.1.0.

@@ -1,4 +1,4 @@
-## Interface: 120100
+## Interface: 120105, 120107
 ## Category: Data Broker
 ## Title: Broker: |cffffffffCoords|r
 ## IconTexture: Interface\Icons\INV_Misc_Map_01
