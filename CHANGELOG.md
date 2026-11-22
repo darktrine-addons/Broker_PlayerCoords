@@ -3,6 +3,11 @@
 User-facing changes, newest first. Internal and dev-tooling work lives in the
 git history, not here.
 
+## [v1.1.7](https://github.com/darktrine-addons/Broker_PlayerCoords/releases/tag/v1.1.7) — 2026-11-22
+
+- feat: **Broker: PlayerCoords now runs on WoW Forever.** The same download works on Retail and Forever; the CurseForge and Wago apps will offer it for both.
+- chore: posting your position to chat now uses the game's current chat functions, so it keeps working when Blizzard retires the old ones.
+
 ## [v1.1.6](https://github.com/darktrine-addons/Broker_PlayerCoords/releases/tag/v1.1.6) — 2026-11-22
 
 - chore: updated for WoW patch **12.1.5**, and ready for **12.1.7** (Interface 120105, 120107). No functional changes.

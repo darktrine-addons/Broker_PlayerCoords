@@ -4,7 +4,7 @@
 
 **Use it from your broker bar or from the built-in minimap button** — both are first-class entry points, and either can be toggled off if you only want one. No broker bar host? No problem. Have one already (Arcana, ElvUI, Bazooka, TitanPanel...)? Drop the minimap icon and use the bar entry instead.
 
-Retail only. Requires Midnight (Interface 120005+); a broker bar host is optional.
+Works on **Retail** (Midnight, 12.1.5+) and **WoW Forever** — the same download covers both. A broker bar host is optional.
 
 ## Features
 
@@ -28,6 +28,7 @@ For manual installation:
 2. Extract the `Broker_PlayerCoords` folder into your addons directory:
    - **Windows**: `World of Warcraft\_retail_\Interface\AddOns\`
    - **macOS**: `Applications/World of Warcraft/_retail_/Interface/AddOns/`
+   - **WoW Forever**: use `_forever_` instead of `_retail_` in the paths above
 3. Restart World of Warcraft or `/reload`
 
 ## Click Interactions
@@ -87,7 +88,7 @@ Open the settings panel via **Shift-Right-click** on the broker button, or via *
 
 ## Compatibility
 
-- **WoW Version**: Retail (Midnight, Interface 120005+)
+- **WoW Version**: Retail (Midnight, 12.1.5+) and WoW Forever
 - **Dependencies**: LibStub, CallbackHandler-1.0, LibDataBroker-1.1, LibDBIcon-1.0 (all bundled)
 - **Broker display**: **optional** — any LDB-compatible host works (Arcana, ElvUI, Bazooka, Broker2FuBar, TitanPanel, etc.). If you don't run one, the built-in minimap button is a full-equivalent entry point on its own.
 

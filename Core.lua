@@ -605,9 +605,16 @@ broker.OnClick = function(self, button)
                 local msg = (subzone ~= "" and subzone ~= zone)
                             and (zone .. ": " .. subzone .. " " .. hyperlink)
                             or  (zone .. " " .. hyperlink)
-                local editBox = ChatEdit_ChooseBoxForSend()
-                ChatEdit_ActivateChat(editBox)
-                editBox:Insert(msg)
+                -- ChatEdit_* are deprecation aliases for ChatFrameUtil.* (12.0+);
+                -- prefer the real functions so a future shim removal can't break this.
+                local CFU = ChatFrameUtil
+                local choose = (CFU and CFU.ChooseBoxForSend) or ChatEdit_ChooseBoxForSend
+                local activate = (CFU and CFU.ActivateChat) or ChatEdit_ActivateChat
+                local editBox = choose and choose()
+                if editBox then
+                    if activate then activate(editBox) end
+                    editBox:Insert(msg)
+                end
             end
         end
     else
